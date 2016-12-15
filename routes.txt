@@ -1,0 +1,10 @@
+GET		/						        Entry
+GET		/setup					        Sets up sample notes/users
+GET		/api/					        Entrypoint for API
+GET		/api/notes/id/:userId	        Search for notes by user
+POST 	/api/notes/new			        Post new note
+
+GET		/api/users/all			        Shows all users
+GET		api/users/id/:id 		        Search for user by ID
+GET		api/users/username/:username 	Search for user by username
+POST 	api/users/new			        Make new user
