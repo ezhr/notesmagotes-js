@@ -8,7 +8,7 @@ You are free to use this project as-is, or to modify as you see fit after clonin
 
 ###To-Do:
 
-1. Authentication through JSON tokens for users.
+~~1. Authentication through JSON tokens for users.~~ Look into Passport as authentication system.
 2. Introduction of, deletion of, and changing of current routes as needs arise/change.
 3. Push-notification support.
 4. Interfacing with an actual remote VPS to ensure compatibility.

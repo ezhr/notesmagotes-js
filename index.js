@@ -14,8 +14,6 @@ var config = require('./config');
 mongoose.connect(config.database);
 var secret = config.secret;
 
-var savedUserId;
-
 var port = process.env.PORT || 3000;
 app.use(morgan('combined'));
 app.use(bodyParser.json());
@@ -30,15 +28,17 @@ var router = express.Router();
 
 // ****************
 // API ROUTES
-// 
-// API ROUTE ENTRY
-// 
+// ****************
 
+ 
+// API ROUTE ENTRY
 router.get('/', (req, res) => {
-	console.log(savedUserId);
 	res.send('Entry point for API');
 });
 
+// Create new user
+// Checks if username already exists and informs if it does and creates a new user if username is unique 
+// Reroutes to authentication route to authenticate new user and provide token
 router.post('/users/new', (req, res) => {
 	User.findOne({username: req.body.username}, (err, user) => {
 		if (user) {
@@ -55,8 +55,9 @@ router.post('/users/new', (req, res) => {
 	});
 });
 
-// Authenticate username + password and return token
-// TO-DO
+// Finds username from database, returns error if username is invalid
+// If username is valid, checks for similarity of password
+// If password is valid, creates new token and sends it back in the response
 router.post('/users/authenticate', (req, res) => {
 	User.findOne({ username: req.body.username }, (err, user) => {
 		if (err) {
@@ -67,7 +68,6 @@ router.post('/users/authenticate', (req, res) => {
 			res.status(400).json({ success: false, message: 'User not found!'});
 		}
 		else {
-			console.log('PASS1');
 			if (user.password != req.body.password)
 				res.status(400).json({ success: false, message: 'Incorrect password!'});
 			else {
@@ -92,12 +92,12 @@ router.post('/users/authenticate', (req, res) => {
 // ****************************************
 // MIDDLEWARE
 // ****************************************
-// Routes henceforth authenticated
 // 
-// Authenticate token and return user ID
-// 
-// TO-DO
+// -- Routes henceforth authenticated
 
+
+// Extracts token from header and verifies
+// If verified, assigns userID to request to be used in further routes
 router.use('/', (req, res, next) => {
 	var token = req.headers['x-token'];
 	if (!token)
@@ -107,7 +107,7 @@ router.use('/', (req, res, next) => {
 			if (err)
 				res.status(400).json({ success: false, message: err});
 			else {
-				savedUserId = decoded._doc._id;
+				req.userId = decoded._doc._id;
 				next();
 			}
 		});
@@ -116,23 +116,21 @@ router.use('/', (req, res, next) => {
 
 
 
-// Search for notes by user ID
-// TO-DO: Authentication
+// Searches for all notes by user using userID
 router.get('/notes/all', (req, res) => {
-	Note.find({'userId': savedUserId}, (err, notes) => {
+	Note.find({'userId': req.userId}, (err, notes) => {
 		if (err) res.json({ success: false, message: err});
 		res.json(notes);
 	});
 });
 
 
-// Make a new note
-// TO-DO: Must have authentication
+// Saves a new note to the database, using userID as a reference
 router.post('/notes/new', (req, res) => {
 	Note.create({
 		title: req.body.title,
 		content: req.body.content,
-		userId: savedUserId
+		userId: req.userId
 	}, (err, note) => {
 		if (err) res.json({ success: false, message: err });
 		else {
