@@ -4,38 +4,156 @@ var morgan = require('morgan');
 var mongodb = require('mongodb');
 var mongoose = require('mongoose');
 var bodyParser = require('body-parser');
+var jwt = require('jsonwebtoken');
 
 
 var User = require('./models/User');
 var Note = require('./models/Note');
+var config = require('./config');
+
+mongoose.connect(config.database);
+var secret = config.secret;
+
+var savedUserId;
 
 var port = process.env.PORT || 3000;
 app.use(morgan('combined'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
-mongoose.connect("mongodb://localhost/notesmagotes/");
-
 // Entry gateway
 app.get('/', (req, res) => {
-    res.send('Nothing to see here!');
+	res.send('Nothing to see here!');
 });
 
 var router = express.Router();
 
+// ****************
+// API ROUTES
+// 
+// API ROUTE ENTRY
+// 
+
 router.get('/', (req, res) => {
-    res.send('Entry point for API');
+	console.log(savedUserId);
+	res.send('Entry point for API');
 });
 
-// Search for notes by user ID
-// TO-DO: Authentication
-router.get('/notes/id/:userId', (req, res) => {
-	Note.find({'userId': req.params.userId}, (err, notes) => {
-		if (err) res.send(err);
- 		res.json(notes);
+router.post('/users/new', (req, res) => {
+	User.findOne({username: req.body.username}, (err, user) => {
+		if (user) {
+			res.status(409).json({ success: false, message: 'Username already exists, please choose another.'});
+		} else {
+			User.create(req.body, (err, user) => {
+				if (err) { 
+					res.json({ success: false, message: err }); 
+					return;
+				}
+				res.redirect(307, '/api/users/authenticate');
+			});
+		}
 	});
 });
 
+// Authenticate username + password and return token
+// TO-DO
+router.post('/users/authenticate', (req, res) => {
+	User.findOne({ username: req.body.username }, (err, user) => {
+		if (err) {
+			res.json({ success: false, message: err });
+			return;
+		}
+		if (!user) {
+			res.status(400).json({ success: false, message: 'User not found!'});
+		}
+		else {
+			console.log('PASS1');
+			if (user.password != req.body.password)
+				res.status(400).json({ success: false, message: 'Incorrect password!'});
+			else {
+				jwt.sign(user, secret, {expiresIn: "2 days"}, (err, token) => {
+					if (err) {
+						res.json( {success: false, message: token} );
+						return;
+					}
+					res.status(200).json({
+						success: true,
+						message: 'Signed in!',
+						token: token
+					});
+					return;
+				});
+			}
+		}
+	});
+});
+
+
+// ****************************************
+// MIDDLEWARE
+// ****************************************
+// Routes henceforth authenticated
+// 
+// Authenticate token and return user ID
+// 
+// TO-DO
+
+router.use('/', (req, res, next) => {
+	var token = req.headers['x-token'];
+	if (!token)
+		res.status(401).json({ success: false, message: 'Please sign in!' });
+	else {	
+		jwt.verify(token, secret, (err, decoded) => {
+			if (err)
+				res.status(400).json({ success: false, message: err});
+			else {
+				savedUserId = decoded._doc._id;
+				next();
+			}
+		});
+	}
+});
+
+
+
+// Search for notes by user ID
+// TO-DO: Authentication
+router.get('/notes/all', (req, res) => {
+	Note.find({'userId': savedUserId}, (err, notes) => {
+		if (err) res.json({ success: false, message: err});
+		res.json(notes);
+	});
+});
+
+
+// Make a new note
+// TO-DO: Must have authentication
+router.post('/notes/new', (req, res) => {
+	Note.create({
+		title: req.body.title,
+		content: req.body.content,
+		userId: savedUserId
+	}, (err, note) => {
+		if (err) res.json({ success: false, message: err });
+		else {
+			res.status(201).json({ success: true, message: 'Note saved!'});
+		}
+	});
+});
+
+
+// Configure router to use /api path
+app.use('/api', router);
+
+// Start server
+app.listen(port, () => {
+	console.log("Server running on port " + port + " ...");
+});
+
+
+// DEPRECATED ROUTES
+
+/*
 // Search for notes by username
 // TO-DO: Authentication
 router.get('/notes/username/:username', (req, res) => {
@@ -48,30 +166,6 @@ router.get('/notes/username/:username', (req, res) => {
 	});
 });
 
-// Make a new note
-// TO-DO: Must have authentication
-router.post('/notes/new', (req, res) => {
-	var id = req.body.userId;
-	var username;
-	User.findOne({'_id': id}, (err, user) => {
-		if (err) {
-			console.log(err);
-			res.status(400).json({status: "FAIL"});
-			return;
-		} else {
-			username = user.username;
-			Note.create({
-			title: req.body.title,
-			note: req.body.note,
-			userId: id,
-			username: username
-			}, (err, note) => {
-				if (err) console.log(err);
-				res.status(201).json({status: 'SUCCESS'});
-			});
-		}
-	});
-});
 
 // Shows all users
 // TO-DO: Must have authentication
@@ -100,18 +194,10 @@ router.get('/users/username/:username', (req, res) => {
 	});
 });
 
-// Make a new user
-// TO-DO: Must have authentication
-router.post('/users/new', (req, res) => {
-	User.create(req.body, (err, user) => {
-		if (err) console.log(err);
-		res.status(201).json({status: 'SUCCESS'});
-	});
-});
 
 
 //app.get('/setup', (req, res) => {
-    /*var user = new User({
+    var user = new User({
         username: 'ollie',
         email: 'enrichingly@twinebush.com',
         password: 'NpkbeBLHkvcRRelZUmhX'
@@ -135,11 +221,7 @@ router.post('/users/new', (req, res) => {
     	if (err) console.log(err);
     	res.json(note);
     });
-    });*/
+    });
 //});
-
-app.use('/api', router);
-
-app.listen(port, () => {
-    console.log("Server running on port " + port + " ...");
-});
+//
+*/

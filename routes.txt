@@ -1,10 +1,20 @@
-GET		/						        Entry
-GET		/setup					        Sets up sample notes/users
-GET		/api/					        Entrypoint for API
-GET		/api/notes/id/:userId	        Search for notes by user
-POST 	/api/notes/new			        Post new note
+ALL routes through /API/
 
-GET		/api/users/all			        Shows all users
-GET		api/users/id/:id 		        Search for user by ID
-GET		api/users/username/:username 	Search for user by username
-POST 	api/users/new			        Make new user
+********************************************************************************************************
+**ROUTE**               **REQUEST**         **AUTHENTICATED**       **REQUEST**             **RESPONSE**
+********************************************************************************************************
+
+/users/new              POST                false                   user object             token
+    - Routes through middleware to notes
+
+/users/authenticate     GET                 false                   username + password     token
+    - Routes through middleware to notes
+
+*** MIDDLEWARE ***
+/                       ALL                 false                   token                   user ID
+    - Authenticatation of token
+    - Routes further
+
+/notes/all              GET                 true                    userId                  note objects
+
+/notes/new              POST                true                    note object             ---
