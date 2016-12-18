@@ -5,7 +5,8 @@ var mongoose = require('mongoose');
 var Schema = new mongoose.Schema({
 	title: {type: String, required: true},
 	content: String,
-	userId: {type: String, required: true}
+	userId: {type: String, required: true},
+	date: {type: Date, required: true, default: Date.now()}
 });
 
 module.exports = mongoose.model('Note', Schema);

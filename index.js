@@ -30,7 +30,7 @@ var router = express.Router();
 // API ROUTES
 // ****************
 
- 
+
 // API ROUTE ENTRY
 router.get('/', (req, res) => {
 	res.send('Entry point for API');
@@ -45,11 +45,10 @@ router.post('/users/new', (req, res) => {
 			res.status(409).json({ success: false, message: 'Username already exists, please choose another.'});
 		} else {
 			User.create(req.body, (err, user) => {
-				if (err) { 
-					res.json({ success: false, message: err }); 
-					return;
-				}
-				res.redirect(307, '/api/users/authenticate');
+				if (err)
+					res.status(400).json({ success: false, message: err });
+				else
+					res.status(200).json({ success: true, message: 'User created!' });
 			});
 		}
 	});
@@ -72,16 +71,15 @@ router.post('/users/authenticate', (req, res) => {
 				res.status(400).json({ success: false, message: 'Incorrect password!'});
 			else {
 				jwt.sign(user, secret, {expiresIn: "2 days"}, (err, token) => {
-					if (err) {
-						res.json( {success: false, message: token} );
-						return;
+					if (err) 
+						res.status(400).json({ success: false, message: err });
+					else {
+						res.status(200).json({
+							success: true,
+							message: 'Signed in!',
+							token: token
+						});
 					}
-					res.status(200).json({
-						success: true,
-						message: 'Signed in!',
-						token: token
-					});
-					return;
 				});
 			}
 		}
@@ -119,8 +117,10 @@ router.use('/', (req, res, next) => {
 // Searches for all notes by user using userID
 router.get('/notes/all', (req, res) => {
 	Note.find({'userId': req.userId}, (err, notes) => {
-		if (err) res.json({ success: false, message: err});
-		res.json(notes);
+		if (err) 
+			res.json({ success: false, message: err});
+		else 
+			res.status(200).json(notes);
 	});
 });
 
@@ -132,10 +132,24 @@ router.post('/notes/new', (req, res) => {
 		content: req.body.content,
 		userId: req.userId
 	}, (err, note) => {
-		if (err) res.json({ success: false, message: err });
-		else {
+		if (err) 
+			res.json({ success: false, message: err });
+		else 
 			res.status(201).json({ success: true, message: 'Note saved!'});
-		}
+	});
+});
+
+// Finds an existing post in the database using its objectID, and updates the fields
+router.post('/notes/update', (req, res) => {
+	Note.findById(req.body._id, (err, note) => {
+		note.title = req.body.title;
+		note.content = req.body.content;
+		note.save((err) => {
+			if (err) 
+				res.json({ success: false, message: err });
+			else 
+				res.status(200).json({ success: true, message: 'Note updated!' });
+		});
 	});
 });
 

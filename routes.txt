@@ -18,3 +18,5 @@ ALL routes through /API/
 /notes/all              GET                 true                    userId                  note objects
 
 /notes/new              POST                true                    note object             ---
+
+/notes/update           POST                true                    note object             ---
