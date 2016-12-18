@@ -153,6 +153,15 @@ router.post('/notes/update', (req, res) => {
 	});
 });
 
+router.post('/notes/delete', (req, res) => {
+	Note.findByIdAndRemove(req.body._id, (err) => {
+		if (err)
+			res.json({ success: false, message: err});
+		else
+			res.status(200).json({ success: true, message: 'Note deleted!' });
+	});
+});
+
 
 // Configure router to use /api path
 app.use('/api', router);

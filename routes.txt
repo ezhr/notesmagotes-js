@@ -20,3 +20,5 @@ ALL routes through /API/
 /notes/new              POST                true                    note object             ---
 
 /notes/update           POST                true                    note object             ---
+
+/notes/delete           POST                true                    noteId                  ---
