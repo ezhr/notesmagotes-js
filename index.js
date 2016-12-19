@@ -133,7 +133,7 @@ router.post('/notes/new', (req, res) => {
 		userId: req.userId
 	}, (err, note) => {
 		if (err) 
-			res.json({ success: false, message: err });
+			res.json({ success: false, message: 'Title can not be blank!' });
 		else 
 			res.status(201).json({ success: true, message: 'Note saved!'});
 	});
@@ -161,7 +161,6 @@ router.post('/notes/delete', (req, res) => {
 			res.status(200).json({ success: true, message: 'Note deleted!' });
 	});
 });
-
 
 // Configure router to use /api path
 app.use('/api', router);
