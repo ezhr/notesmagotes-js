@@ -26,6 +26,16 @@ app.get('/', (req, res) => {
 
 var router = express.Router();
 
+mongoose.set('debug', true);
+
+Note.on('index', function(err) {
+    if (err) {
+        console.error('User index error: %s', err);
+    } else {
+        console.info('User indexing complete');
+    }
+});
+
 // ****************
 // API ROUTES
 // ****************
@@ -153,12 +163,21 @@ router.post('/notes/update', (req, res) => {
 	});
 });
 
-router.post('/notes/delete', (req, res) => {
-	Note.findByIdAndRemove(req.body._id, (err) => {
+router.get('/notes/delete', (req, res) => {
+	Note.findByIdAndRemove(req.headers['x-id'], (err) => {
 		if (err)
 			res.json({ success: false, message: err});
 		else
 			res.status(200).json({ success: true, message: 'Note deleted!' });
+	});
+});
+
+router.get('/notes/find', (req, res) => {
+	Note.find({ userId: req.userId, $text: { $search: req.headers['x-search']} }).sort('title').exec((err, notes) => {
+		if (err)
+			res.json({ success: false, message: err });
+		else
+			res.status(200).json(notes);
 	});
 });
 
