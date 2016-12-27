@@ -10,7 +10,7 @@ You are free to use this project as-is, or to modify as you see fit after clonin
 
 1. ~~Authentication through JSON tokens for users.  Look into Passport as authentication system.~~  Implementing Passport as authentication will be arduous if implemented this late into the project.  May possibly develop a new project to do this to learn.  For now, jwt works fine.  Will look into hashing passwords to increase security.
 2. Introduction of, deletion of, and changing of current routes as needs arise/change. **ON-GOING**
-3. ~Push-notification support.~  Implemented.  Bugs present but for the most part, works.  App allows users to send notes to each other reminiscent of e-mail systems of old.  Push notification sent if note is saved to another user's notes.
+3. ~~Push-notification support.~~  FCM (push-notifications) implemented.  Bugs present but for the most part, works.  App allows users to send notes to each other reminiscent of e-mail systems of old.  Push notification sent if note is saved to another user's notes.
 4. ~~Interfacing with an actual remote VPS to ensure compatibility.~~  Completed. Tested on VPS - works fine.
 5. ~~Enable regex querying of database to search for imperfect queries of usernames.~~  Note searching (including content) has been implemented, but lacks regex querying.  May possibly be implemented in a future update.
 6. Bug-squashing, mostly error handling without crashing the app.  **PERMANENTLY ON-GOING**
