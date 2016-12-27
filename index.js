@@ -5,6 +5,7 @@ var mongodb = require('mongodb');
 var mongoose = require('mongoose');
 var bodyParser = require('body-parser');
 var jwt = require('jsonwebtoken');
+var FCM = require('fcm-node');
 
 
 var User = require('./models/User');
@@ -13,6 +14,8 @@ var config = require('./config');
 
 mongoose.connect(config.database);
 var secret = config.secret;
+var serverKey = config.serverKey;
+var fcm = new FCM(serverKey);
 
 var port = process.env.PORT || 3000;
 app.use(morgan('combined'));
@@ -29,11 +32,11 @@ var router = express.Router();
 mongoose.set('debug', true);
 
 Note.on('index', function(err) {
-    if (err) {
-        console.error('User index error: %s', err);
-    } else {
-        console.info('User indexing complete');
-    }
+	if (err) {
+		console.error('User index error: %s', err);
+	} else {
+		console.info('User indexing complete');
+	}
 });
 
 // ****************
@@ -116,10 +119,31 @@ router.use('/', (req, res, next) => {
 				res.status(400).json({ success: false, message: err});
 			else {
 				req.userId = decoded._doc._id;
+				req.username = decoded._doc.username;
+				console.log(req.username);
 				next();
 			}
 		});
 	}
+});
+
+// Sets FCM token
+router.use('/users/refreshtoken', (req, res) => {
+	var fcmToken = req.headers['x-fcm-token'];
+	console.log(fcmToken);
+	User.findOne({'_id': req.userId}, (err, user) => {
+		if (err)
+			res.json({ success: false, message: err });
+		else {
+			user.fcmToken = fcmToken;
+			user.save((err) => {
+				if (err)
+					res.status(400).json({ success: false, message: err });
+				else 
+					res.status(200).json({ success: true, message: 'Token refreshed successfully'});
+			})
+		}
+	});
 });
 
 
@@ -137,16 +161,51 @@ router.get('/notes/all', (req, res) => {
 
 // Saves a new note to the database, using userID as a reference
 router.post('/notes/new', (req, res) => {
-	Note.create({
-		title: req.body.title,
-		content: req.body.content,
-		userId: req.userId
-	}, (err, note) => {
-		if (err) 
-			res.json({ success: false, message: 'Title can not be blank!' });
-		else 
-			res.status(201).json({ success: true, message: 'Note saved!'});
-	});
+	var title = req.body.title;
+	var	content = req.body.content;
+	var	userId;
+	var fcmToken;
+	if (req.headers['x-user']){
+		User.findOne({ username: req.headers['x-user'] }, (err, user) => {
+			if (err)
+				res.json({ success: false, message: err})
+			else {
+				fcmToken = user.fcmToken;
+				console.log(fcmToken);
+				userId = user._id;
+				createNote();
+			}
+		});
+	}
+	else {
+		userId = req.userId;
+		createNote();
+	}
+	function createNote() {
+		Note.create({
+			title, content, userId
+		}, (err, note) => {
+			if (err) 
+				res.json({ success: false, message: err });
+			else {
+				res.status(201).json({ success: true, message: 'Note saved!'});
+				if (fcmToken) {
+					var message = {
+						to: fcmToken,
+						data: {
+							sender: req.username
+						}
+					}
+					fcm.send(message, (err, messageId) => {
+						if (err)
+							console.log(err);
+						else
+							console.log(messageId);
+					});
+				}
+			}
+		});
+	}
 });
 
 // Finds an existing post in the database using its objectID, and updates the fields
